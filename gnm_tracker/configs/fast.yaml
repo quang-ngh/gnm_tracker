@@ -1,0 +1,136 @@
+seed: 0
+device: auto
+model:
+  version: '3'
+  variant: head
+  landmarks: dense_468
+  dense_468_file: data/correspondence/head_dense_468.txt
+  expression_groups_file: data/groups/expression_groups.json
+camera:
+  focal_ratio: 1.2
+  optimize_focal: false
+  focal_log_reg: 10.0
+  principal_point: null
+  base_rotation_axis_angle:
+  - 3.14159265
+  - 0.0
+  - 0.0
+  translation_init:
+  - 0.0
+  - 0.0
+  - 0.55
+  z_near: 0.05
+fit:
+  huber_delta: 3.0
+  rigid_landmark_ids:
+  - 168
+  - 6
+  - 4
+  - 33
+  - 263
+  - 133
+  - 362
+  - 61
+  - 291
+  - 152
+  k_shape_frames: 16
+  batch_size: 32
+  optimizer: adam
+  lbfgs_polish: false
+  stages:
+    rigid:
+      iters: 60
+      lr: 0.05
+      params:
+      - rotation
+      - translation
+      weights:
+        lmk: 1.0
+        pho: 0.0
+        psi: 0.0
+        beta: 0.0
+        temp: 0.0
+        mouth: 0.0
+        col: 0.0
+    shape:
+      iters: 120
+      lr: 0.02
+      params:
+      - shape
+      - rotation
+      - translation
+      - expression_coarse
+      weights:
+        lmk: 1.0
+        pho: 0.0
+        psi: 5.0
+        beta: 1.0
+        temp: 0.0
+        mouth: 1.0
+        col: 0.0
+    expression:
+      iters: 100
+      lr: 0.01
+      params:
+      - expression
+      - rotation
+      - translation
+      weights:
+        lmk: 1.0
+        pho: 0.25
+        psi: 2.0
+        beta: 0.0
+        temp: 5.0
+        mouth: 1.0
+        col: 0.1
+      photometric_from_iter: 100
+  regularizers:
+    psi_prior: mahalanobis
+    psi_prior_eps: 0.0001
+    beta_prior: l2
+mouth:
+  mode: pin
+  hard_zero: false
+  pin_weight: 50.0
+  interior_dim_groups:
+  - tongue_mean
+  - tongue
+quality:
+  reproj_error_max: 0.06
+  presence_min: 0.5
+  visibility_min: 0.5
+  jerk_max: 0.15
+  pose_yaw_max_deg: 60.0
+  pose_pitch_max_deg: 45.0
+  min_valid_run: 5
+psi_cleanliness:
+  num_identity_pairs: 8
+  consistency_threshold: 0.05
+  reference: sparse_68
+neutral:
+  min_motion_percentile: 10
+  min_frames: 5
+viz:
+  enabled: true
+  sample_frames: 8
+  video: true
+  video_fps: 25
+  wireframe_alpha: 0.5
+  wireframe_stride: 4
+  residual_cmap: turbo
+  render_backend: opencv
+  mesh_color:
+  - 0
+  - 210
+  - 0
+  mesh_alpha: 0.55
+io:
+  fps: null
+  max_frames: null
+  image_long_side: null
+export:
+  output_dir: outputs
+  compress_npz: true
+  manifest: outputs/manifest.jsonl
+  stats: outputs/dataset_stats.json
+  reserve_audio_feat: true
