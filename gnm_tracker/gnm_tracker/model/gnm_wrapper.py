@@ -24,6 +24,7 @@ from torch import nn
 
 from gnm_tracker.config import Config, resolve_path
 from gnm_tracker.model.landmark_layer import BarycentricLandmarks
+from gnm_tracker.model import _etils_grad_patch  # noqa: F401  (installs autograd-safe asarray)
 
 
 class GnmModel(nn.Module):
