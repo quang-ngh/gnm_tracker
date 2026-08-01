@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gnm-tracker"
+version = "0.1.0"
+description = "Monocular offline tracker fitting Google's GNM Head model to talking-head video."
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "torch",
+    "opencv-python",
+    "mediapipe",
+    "imageio[ffmpeg]",
+    "matplotlib",
+    "pyyaml",
+    "tqdm",
+    # GNM Head model (PyTorch backend). Install from the sibling checkout:
+    #   pip install -e ../gnm/shape[pytorch]
+    # "gnm-shape",
+]
+
+[project.optional-dependencies]
+# Differentiable rasterizer for the photometric stage. nvdiffrast needs CUDA;
+# on Apple Silicon use pytorch3d (slower) or keep the OpenCV viz fallback.
+photometric = ["nvdiffrast"]
+photometric-mac = ["pytorch3d"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["gnm_tracker*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

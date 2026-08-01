@@ -1,0 +1,162 @@
+# =============================================================================
+# GNM Monocular Tracker — default configuration
+#
+# Every threshold, loss weight and schedule knob lives here (Section 13.1 of the
+# implementation plan: "a config with all thresholds/weights as named knobs").
+# Stages A/B/C use *different* weight sets — see `stages:` below.
+#
+# Units: GNM operates in METERS (inter-ocular distance ~0.06 m on the neutral
+# template). Translation / focal are chosen with that in mind.
+# =============================================================================
+
+seed: 0
+device: auto            # auto -> cuda if available, else mps, else cpu
+
+# ---------------------------------------------------------------------------
+# Model
+# ---------------------------------------------------------------------------
+model:
+  version: "3"          # GNMMajorVersion.V3
+  variant: "head"       # GNMVariant.HEAD
+  # Which landmark correspondence drives the fit. dense_468 (MediaPipe) is the
+  # default; sparse_68 is GNM's shipped set (used as a fallback / sanity check).
+  landmarks: dense_468  # dense_468 | sparse_68
+  # Vendored MediaPipe<->GNM correspondence (barycentric, i0 w0 i1 w1 i2 w2).
+  dense_468_file: data/correspondence/head_dense_468.txt
+  # Named expression-dim groups (regenerate with scripts/dump_gnm_groups.py).
+  expression_groups_file: data/groups/expression_groups.json
+
+# ---------------------------------------------------------------------------
+# Camera (pinhole; extrinsics are folded into GNM's neck rotation+translation)
+# ---------------------------------------------------------------------------
+camera:
+  # Focal length as a fraction of max(H, W) in pixels. In-the-wild intrinsics
+  # are unknown; this is a plausible default (~50 deg HFOV) and can be weakly
+  # optimized. focal_px = focal_ratio * max(H, W).
+  focal_ratio: 1.2
+  optimize_focal: false      # weakly optimize focal in Stage A if true
+  focal_log_reg: 10.0        # penalty on log(focal/focal_init) when optimized
+  # Principal point defaults to image center; override as [cx, cy] in pixels.
+  principal_point: null
+  # Base rotation (axis-angle, radians) applied to bring GNM's canonical frame
+  # in front of a camera looking down +Z, so Stage A starts near-frontal.
+  # GNM's template faces +Z with +Y up; a pi rotation about X puts it toward
+  # the camera. Verified empirically by scripts/dump_gnm_groups.py.
+  base_rotation_axis_angle: [3.14159265, 0.0, 0.0]
+  # Initial head distance from camera, meters (positive Z = in front).
+  translation_init: [0.0, 0.0, 0.55]
+  z_near: 0.05               # reject verts closer than this (behind camera)
+
+# ---------------------------------------------------------------------------
+# Fitting schedule (per clip). Stage A -> B -> C -> D (Section 6).
+# ---------------------------------------------------------------------------
+fit:
+  huber_delta: 3.0           # pixels, on the landmark residual
+  # MediaPipe canonical indices used as the *stable* subset for rigid Stage A
+  # (nose bridge, eye corners, nose tip, chin). Robust to expression.
+  rigid_landmark_ids: [168, 6, 4, 33, 263, 133, 362, 61, 291, 152]
+  k_shape_frames: 16         # K frames sampled to solve the shared shape (B)
+  batch_size: 32             # frame batch for Stage C
+  optimizer: adam            # adam | lbfgs (lbfgs only for final polish)
+  lbfgs_polish: false        # run an L-BFGS pass at the end of Stage C
+
+  stages:
+    # -- Stage A: rigid pose (beta=0, psi=0), stable landmarks only ----------
+    rigid:
+      iters: 200
+      lr: 0.05
+      params: [rotation, translation]      # + focal if camera.optimize_focal
+      weights: {lmk: 1.0, pho: 0.0, psi: 0.0, beta: 0.0, temp: 0.0, mouth: 0.0, col: 0.0}
+    # -- Stage B: shared shape over K frames (identity pinned) ---------------
+    shape:
+      iters: 400
+      lr: 0.02
+      params: [shape, rotation, translation, expression_coarse]
+      weights: {lmk: 1.0, pho: 0.0, psi: 5.0, beta: 1.0, temp: 0.0, mouth: 1.0, col: 0.0}
+    # -- Stage C: per-frame expression refine (beta FROZEN) ------------------
+    expression:
+      iters: 300
+      lr: 0.01
+      params: [expression, rotation, translation]   # shape is frozen
+      weights: {lmk: 1.0, pho: 0.25, psi: 2.0, beta: 0.0, temp: 5.0, mouth: 1.0, col: 0.1}
+      photometric_from_iter: 100   # enable L_pho only after landmarks settle
+
+  regularizers:
+    # Expression prior. If GNM ships expression statistics, use Mahalanobis;
+    # else fall back to plain L2. Keep this STRONG (invariant #5 depends on it).
+    psi_prior: mahalanobis     # mahalanobis | l2
+    psi_prior_eps: 1.0e-4      # ridge added to covariance before inversion
+    beta_prior: l2
+
+# ---------------------------------------------------------------------------
+# Mouth-interior (tongue/teeth) policy (Section 8). v1 = pin.
+# ---------------------------------------------------------------------------
+mouth:
+  mode: pin                 # pin | viseme | audio   (viseme/audio need audio)
+  hard_zero: false          # if true, tongue dims are clamped to 0 each step
+  pin_weight: 50.0          # L_mouth = pin_weight * ||psi[tongue_dims]||^2
+  # Which expression-dim group is "not observable from a single camera".
+  # Resolved from expression_groups.json: tongue_mean + tongue = dims 350..381.
+  interior_dim_groups: [tongue_mean, tongue]
+
+# ---------------------------------------------------------------------------
+# Per-frame quality mask (Section 9). A frame with valid=False is NOT exported.
+# ---------------------------------------------------------------------------
+quality:
+  # Reprojection error is normalized by inter-ocular distance (pixels).
+  reproj_error_max: 0.06
+  presence_min: 0.5
+  visibility_min: 0.5
+  jerk_max: 0.15            # third difference of psi (normalized), per-frame
+  pose_yaw_max_deg: 60.0
+  pose_pitch_max_deg: 45.0
+  min_valid_run: 5         # drop isolated valid runs shorter than this
+
+# ---------------------------------------------------------------------------
+# psi-cleanliness acceptance gate (Section 9) — the REAL Tier 2/3 gate.
+# "same expression => same psi, regardless of identity."
+# ---------------------------------------------------------------------------
+psi_cleanliness:
+  num_identity_pairs: 8      # random (A,B) shape pairs to test transfer on
+  # Transfer A's psi onto B's shape; landmark geometry must stay consistent.
+  consistency_threshold: 0.05   # normalized landmark drift; above => FAIL
+  reference: sparse_68       # landmark set used to measure consistency
+
+# ---------------------------------------------------------------------------
+# Neutralization (Stage D)
+# ---------------------------------------------------------------------------
+neutral:
+  # Estimate the per-clip neutral psi from the lowest-motion frames.
+  min_motion_percentile: 10  # use the calmest 10% of frames
+  min_frames: 5
+
+# ---------------------------------------------------------------------------
+# Debug visualization (Section 11) — first-class, on from Tier 1.
+# ---------------------------------------------------------------------------
+viz:
+  enabled: true
+  sample_frames: 8           # overlay stills dumped per fit
+  video: true                # export full-clip overlay mp4 (catches jitter)
+  video_fps: 25
+  wireframe_alpha: 0.5
+  wireframe_stride: 4        # draw every Nth edge to keep overlays legible
+  residual_cmap: turbo       # color landmark residual segments by magnitude
+  render_backend: opencv     # opencv | nvdiffrast | pytorch3d (photometric)
+  # Shaded green-mesh overlay (the GNM-teaser look; back-face culled).
+  mesh_color: [0, 210, 0]    # RGB of the overlaid mesh
+  mesh_alpha: 0.55           # opacity of the mesh over the frame
+
+# ---------------------------------------------------------------------------
+# I/O + export (Section 7)
+# ---------------------------------------------------------------------------
+io:
+  fps: null                  # null -> use source fps
+  max_frames: null           # cap frames per clip (null = all)
+  image_long_side: null      # optionally downscale frames for speed
+
+export:
+  output_dir: outputs
+  compress_npz: true
+  manifest: outputs/manifest.jsonl
+  stats: outputs/dataset_stats.json
+  reserve_audio_feat: true   # keep the audio_feat slot (deferred) in the schema
