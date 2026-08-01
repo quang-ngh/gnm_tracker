@@ -107,7 +107,9 @@ quality:
   reproj_error_max: 0.06
   presence_min: 0.5
   visibility_min: 0.5
-  jerk_max: 0.15            # third difference of psi (normalized), per-frame
+  jerk_max: 0.15            # absolute floor on normalized psi jerk (third difference)
+  jerk_rel_k: 5.0           # also allow up to median + k*MAD per clip (tolerate the
+                            # per-frame fit-noise floor on real footage; drop only jumps)
   pose_yaw_max_deg: 60.0
   pose_pitch_max_deg: 45.0
   min_valid_run: 5         # drop isolated valid runs shorter than this

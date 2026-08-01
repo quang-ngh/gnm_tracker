@@ -71,12 +71,15 @@ class ClipRecord:
         if extra_meta:
             meta.update(extra_meta)
 
+        # params hold the ABSOLUTE (image-matched) expression; store it neutral-
+        # normalized (expr = ψ - neutral). Reconstruct absolute as expr + neutral_expr.
+        neutral = np.asarray(result.neutral, dtype=np.float32)
         return cls(
             clip_id=clip_id,
             shape=_np(p["shape"]),
-            expr=_np(p["expression"]),
+            expr=_np(p["expression"]) - neutral[None],
             pose=pose,
-            neutral_expr=np.asarray(result.neutral, dtype=np.float32),
+            neutral_expr=neutral,
             valid=np.asarray(result.valid, dtype=bool),
             meta=meta,
         )

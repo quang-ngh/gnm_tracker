@@ -174,6 +174,13 @@ mean/var, tongue-dim magnitude to confirm the pin behaved).
   with `torch.asarray(joint_parent_indices[1:], ...)` which lands on CPU → `index_select`
   device mismatch on CUDA. Fixed by pinning it to the model's device in
   `model/gnm_wrapper.py` (then `torch.asarray` preserves the device).
+- **Neutralization applied to the fitter (viz showed ψ−neutral)** — Stage D subtracted the
+  per-clip neutral *in place*, so viz/metrics rendered `ψ − neutral`; and because the
+  neutral is estimated from lowest-velocity frames, a *held* expression (e.g. a smile)
+  makes `neutral` itself non-neutral (measured `|neutral[mouth]| = 0.37`), so an open
+  mouth rendered nearly closed. Now params stay ABSOLUTE (image-matched) for viz/metrics;
+  the neutral is subtracted only at export (`expr = ψ − neutral`, `absolute = expr +
+  neutral_expr`). See `fit/sequence.py` Stage D and `export/schema.py`.
 
 ## 10. Not done / next steps
 
@@ -181,5 +188,13 @@ mean/var, tongue-dim magnitude to confirm the pin behaved).
   on Mac). The landmark-only path is complete and sufficient. See RENDERING.md.
 - **Mahalanobis ψ prior**: run `src/estimate_psi_prior.py` (needs TF) to enable it;
   otherwise a strong L2 prior is used.
+- **Quality-gate calibration for real footage**: default thresholds were set on the
+  synthetic self-consistency test (near-perfect fit). On real clips the per-frame fit has
+  genuine residual (median reproj ~0.09 of interocular, from detector noise + GNM/person
+  shape mismatch + minibatch under-convergence), so `reproj_error_max=0.06` + `min_valid_run`
+  can drop whole clips. The jerk gate is now per-clip robust (`jerk_rel_k`); reproj/min-run
+  still need recalibration, and/or tighter fits (more Stage-C iters, larger batch, per-frame
+  warm-start). `configs/expressive.yaml` loosens the ψ/temporal reg so extreme mouth opening
+  is captured.
 - **Full dataset**: run `src/build_dataset.py` over the whole clip folder.
 - **Audio (Phase 1) / renderer (Phase 2)**: out of scope for this tracker.

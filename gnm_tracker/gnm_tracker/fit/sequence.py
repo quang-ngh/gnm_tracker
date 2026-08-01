@@ -97,14 +97,15 @@ def fit_sequence(model, frames, detections, cfg, device="cpu", renderer=None) ->
     fitter.params.freeze_shape()
     fitter.run_stage("expression", stages.expression, all_pool, batch_size=bs)
 
-    # D: neutralize + quality mask.
+    # D: quality mask on the image-matched fit, then estimate the per-clip neutral.
+    # IMPORTANT: keep the fitter's params ABSOLUTE (image-matched). Neutralization is
+    # a *storage* normalization applied only at export (expr = ψ - neutral; absolute =
+    # expr + neutral_expr). Subtracting it in-place would shift the mesh off the image
+    # and make viz/metrics render ψ - neutral — e.g. an under-open mouth, because a
+    # held smile makes `neutral` itself non-neutral (it can carry a large mouth term).
     metrics = compute_metrics(fitter)
     valid, _ = compute_validity(metrics, cfg)
     neutral = estimate_neutral(fitter.params.expression.detach(), valid, cfg)
-    fitter.params.subtract_neutral(neutral)
-    # Re-measure metrics after neutralization (jerk/pose unchanged; harmless).
-    metrics = compute_metrics(fitter)
-    valid, _ = compute_validity(metrics, cfg)
 
     # psi-cleanliness acceptance gate (Section 9).
     psi_samples = _select_psi_samples(fitter.params.expression.detach(), valid)

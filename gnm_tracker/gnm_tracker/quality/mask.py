@@ -102,10 +102,18 @@ def _enforce_min_run(valid: np.ndarray, min_run: int) -> np.ndarray:
 def compute_validity(metrics: dict[str, np.ndarray], cfg) -> tuple[np.ndarray, dict]:
     """Return ``(valid (T,) bool, reasons)`` from per-frame metrics."""
     q = cfg.quality
+    # Jerk: absolute floor OR a per-clip robust threshold (median + k*MAD). Real
+    # per-frame fits carry a baseline frame-to-frame noise (jerk ~ O(1) relative to
+    # amplitude); an absolute-only threshold would drop entire clips, so we adapt to
+    # the clip's own noise floor and reject only genuine jumps above it.
+    jerk = metrics["jerk"]
+    jmed = float(np.median(jerk))
+    jmad = float(np.median(np.abs(jerk - jmed)))
+    jerk_thr = max(float(q.jerk_max), jmed + float(q.get("jerk_rel_k", 5.0)) * (jmad + 1e-6))
     reasons = {
         "reproj": metrics["reproj_med"] <= float(q.reproj_error_max),
         "confidence": metrics["conf_mean"] >= min(float(q.presence_min), float(q.visibility_min)),
-        "jerk": metrics["jerk"] <= float(q.jerk_max),
+        "jerk": jerk <= jerk_thr,
         "yaw": np.abs(metrics["yaw_deg"]) <= float(q.pose_yaw_max_deg),
         "pitch": np.abs(metrics["pitch_deg"]) <= float(q.pose_pitch_max_deg),
         "detected": metrics["detected"].astype(bool),
