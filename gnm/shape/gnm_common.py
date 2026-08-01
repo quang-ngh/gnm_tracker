@@ -275,8 +275,11 @@ def joint_transforms_world(
       joints, 2, (num_joints, 1, 4), dtype=joints.dtype
   )
   # Set the last element to 1.0.
+  homogeneous_kwargs = dict(dtype=joints.dtype)
+  if enp.lazy.is_torch(joints):
+    homogeneous_kwargs['device'] = joints.device
   bottom_row = bottom_row + xnp.asarray(
-      [0.0, 0.0, 0.0, 1.0], dtype=joints.dtype
+      [0.0, 0.0, 0.0, 1.0], **homogeneous_kwargs
   )
 
   local_transforms = xnp.concatenate(
