@@ -4,8 +4,9 @@ Reuses GNM's own rendering ingredients as much as possible (the machine here is
 headless with no EGL/OSMesa, so `gnm_pyrender.render`'s GL path can't run):
 
   * per-vertex colors from GNM's ``visualization.vertex_colors.get_vertex_colors``
-    (blue skin + bright scleras + dark irises + teeth) — so the **eyes are
-    visible**, exactly like GNM's demo;
+    (blue skin + teeth/tongue highlights), plus an ``eye_exteriors`` paint job
+    of our own (see ``_paint_eye_exteriors``) — so the **eyes are visible**,
+    exactly like GNM's demo;
   * per-vertex normals from GNM's ``compute_vertex_normals``;
   * a camera head-light, matching ``gnm_pyrender``'s DirectionalLight-on-camera.
 
@@ -24,7 +25,52 @@ _GNM_SKIN = (50 / 255.0, 156 / 255.0, 237 / 255.0)
 _GRAY_BG = (239, 239, 239)
 _AMBIENT = 0.30
 
+# Eyeball look (sclera/iris/pupil), as a fraction of each eye's radius from its
+# ``eye_exteriors`` centroid (see ``_paint_eye_exteriors``).
+_PUPIL_COLOR = (0.03, 0.03, 0.03)
+_IRIS_COLOR = (0.20, 0.22, 0.26)
+_SCLERA_COLOR = (0.92, 0.92, 0.90)
+_PUPIL_RADIUS = 0.18
+_IRIS_RADIUS = 0.42
+
 _VCOL_CACHE: dict[int, np.ndarray] = {}
+
+
+def _paint_eye_exteriors(model, cols: np.ndarray) -> None:
+    """Paint GNM's ``eye_exteriors`` group (in place) as sclera+iris+pupil.
+
+    ``vertex_colors.get_vertex_colors`` only highlights ``scleras``/``irises``,
+    which (verified empirically — see the eye-color investigation) are a
+    separate, occluded structure: the actually-visible eyeball cap seen through
+    the socket opening is ``eye_exteriors``, which GNM's utility leaves at
+    black (its demo renders presumably shade this via a proper eye texture that
+    isn't shipped in this repo's assets). Left unpainted, it falls through to
+    the skin-color fallback below and the eyes read as flat blue holes.
+    Approximate a sclera/iris/pupil pattern instead, using radial distance from
+    each eye's centroid in the (pose-invariant) template.
+    """
+    names = model.gnm.vertex_group_names
+    if "eye_exteriors" not in names:
+        return
+    tmpl = model.template_vertices.detach().cpu().numpy()
+    ext_ids = np.asarray(model.gnm.vertex_group_indices("eye_exteriors"))
+    for side in ("left_eye", "right_eye"):
+        if side not in names:
+            continue
+        side_ids = set(np.asarray(model.gnm.vertex_group_indices(side)).tolist())
+        ids = np.array([i for i in ext_ids if i in side_ids])
+        if len(ids) == 0:
+            continue
+        pos = tmpl[ids]
+        # The pupil axis is the most-protruding point (max local +Z, GNM's
+        # face-forward axis) — the cap's *centroid* is a poor proxy since a
+        # shallow spherical cap has near-uniform vertex-to-centroid distances.
+        apex = pos[np.argmax(pos[:, 2])]
+        dist = np.linalg.norm(pos - apex, axis=-1)
+        d_norm = dist / (dist.max() + 1e-8)
+        cols[ids] = _SCLERA_COLOR
+        cols[ids[d_norm <= _IRIS_RADIUS]] = _IRIS_COLOR
+        cols[ids[d_norm <= _PUPIL_RADIUS]] = _PUPIL_COLOR
 
 
 def _gnm_vertex_colors(model) -> np.ndarray:
@@ -36,9 +82,10 @@ def _gnm_vertex_colors(model) -> np.ndarray:
             from gnm.shape.visualization import vertex_colors as vc
 
             cols = np.asarray(vc.get_vertex_colors(gnm_np=model.gnm), np.float32)
+            _paint_eye_exteriors(model, cols)
             # GNM leaves non-highlighted groups (eye sockets/interior, ears, gums)
-            # at black; fill those with the skin color so eyes read as eyeballs
-            # (bright sclera + dark iris) rather than black holes.
+            # at black; fill those with the skin color so they read as skin
+            # rather than black holes.
             cols[cols.sum(axis=1) == 0] = skin
         except Exception:  # fallback: uniform skin
             cols = np.tile(skin, (model.num_vertices, 1))
