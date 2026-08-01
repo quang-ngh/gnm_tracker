@@ -11,7 +11,7 @@ translation are applied inside GNM). So the camera carries only:
 For GNM's frame, ``R_wc`` is a 180 deg rotation about X (``diag(1, -1, -1)``):
 that sends face-forward toward the camera and "up" to image-up. See
 ``configs/default.yaml: camera.base_rotation_axis_angle`` and
-``scripts/dump_gnm_groups.py`` for the empirical orientation check.
+``src/dump_gnm_groups.py`` for the empirical orientation check.
 
 In-the-wild intrinsics are unknown, so focal is an assumed default and may be
 weakly optimized (Stage A) with a strong log-space prior.

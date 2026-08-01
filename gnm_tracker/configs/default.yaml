@@ -10,7 +10,7 @@
 # =============================================================================
 
 seed: 0
-device: auto            # auto -> cuda if available, else mps, else cpu
+device: auto            # auto -> CUDA if available, else CPU (override: cpu/cuda/mps)
 
 # ---------------------------------------------------------------------------
 # Model
@@ -23,7 +23,7 @@ model:
   landmarks: dense_468  # dense_468 | sparse_68
   # Vendored MediaPipe<->GNM correspondence (barycentric, i0 w0 i1 w1 i2 w2).
   dense_468_file: data/correspondence/head_dense_468.txt
-  # Named expression-dim groups (regenerate with scripts/dump_gnm_groups.py).
+  # Named expression-dim groups (regenerate with src/dump_gnm_groups.py).
   expression_groups_file: data/groups/expression_groups.json
 
 # ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ camera:
   # Base rotation (axis-angle, radians) applied to bring GNM's canonical frame
   # in front of a camera looking down +Z, so Stage A starts near-frontal.
   # GNM's template faces +Z with +Y up; a pi rotation about X puts it toward
-  # the camera. Verified empirically by scripts/dump_gnm_groups.py.
+  # the camera. Verified empirically by src/dump_gnm_groups.py.
   base_rotation_axis_angle: [3.14159265, 0.0, 0.0]
   # Initial head distance from camera, meters (positive Z = in front).
   translation_init: [0.0, 0.0, 0.55]

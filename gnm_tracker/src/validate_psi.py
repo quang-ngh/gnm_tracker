@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Validation gates (Sections 9 & 10) — CI entry point.
 
-    python scripts/validate_psi.py --correspondence-only   # eyelid self-check
-    python scripts/validate_psi.py                         # + psi-cleanliness
+    python src/validate_psi.py --correspondence-only   # eyelid self-check
+    python src/validate_psi.py                         # + psi-cleanliness
 
 Exits non-zero if any requested check fails, so it can gate CI.
 """

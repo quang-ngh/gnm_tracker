@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Tier 1 — fit GNM to a single frame and (optionally) dump debug viz.
 
-    python scripts/fit_single_frame.py --image face.png --out debug/ --viz
-    python scripts/fit_single_frame.py --video clip.mp4 --frame 30 --out debug/ --viz
+    python src/fit_single_frame.py --image face.png --out debug/ --viz
+    python src/fit_single_frame.py --video clip.mp4 --frame 30 --out debug/ --viz
 """
 
 from __future__ import annotations

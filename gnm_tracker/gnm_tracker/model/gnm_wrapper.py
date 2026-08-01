@@ -9,7 +9,7 @@ not surface directly:
   * vertex masks for the photometric loss (exclude mouth/eye interior),
   * a convenience forward returning both vertices and landmarks.
 
-GNM facts baked in (v3.0 HEAD, verified in scripts/dump_gnm_groups.py):
+GNM facts baked in (v3.0 HEAD, verified in src/dump_gnm_groups.py):
 V=17821 vertices, J=4 joints [neck, head, left_eye, right_eye], I=253, E=383,
 tongue dims 350..381, units = meters.
 """

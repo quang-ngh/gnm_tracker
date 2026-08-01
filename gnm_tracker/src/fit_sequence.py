@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Tier 2 — fit a clip (sequence) and export a dataset record + debug viz.
 
-    python scripts/fit_sequence.py --video clip.mp4 --out outputs/ --viz
+    python src/fit_sequence.py --video clip.mp4 --out outputs/ --viz
 """
 
 from __future__ import annotations

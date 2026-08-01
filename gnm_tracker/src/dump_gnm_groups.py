@@ -8,7 +8,7 @@ changes. Also emits mesh-orientation diagnostics used to set the camera's
 base rotation, and the vertex groups that make up the mouth-interior photometric
 mask.
 
-    python scripts/dump_gnm_groups.py            # writes data/groups/...
+    python src/dump_gnm_groups.py            # writes data/groups/...
 
 Uses GNM's NumPy backend (no torch required).
 """

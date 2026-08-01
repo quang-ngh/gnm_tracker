@@ -5,7 +5,7 @@ Runs the sequence fitter over a folder of clips, applies quality filtering, emit
 the export schema (Section 7), a manifest with per-clip validity, and dataset
 statistics.
 
-    python scripts/build_dataset.py --videos-dir ../TalkingHead-1KH/small/cropped_clips --out outputs/
+    python src/build_dataset.py --videos-dir ../TalkingHead-1KH/small/cropped_clips --out outputs/
 """
 
 from __future__ import annotations

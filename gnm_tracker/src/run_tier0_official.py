@@ -5,7 +5,7 @@ Before writing a custom optimizer, characterize what GNM already ships and how
 far a minimal landmark fit gets on our footage, then write a findings report:
 what fits well, where it fails, and what we must build.
 
-    python scripts/run_tier0_official.py --videos-dir ../TalkingHead-1KH/small/cropped_clips --num-clips 3
+    python src/run_tier0_official.py --videos-dir ../TalkingHead-1KH/small/cropped_clips --num-clips 3
 
 Note: GNM ships a differentiable model, sparse-68 landmarks, PCA/least-squares
 `fitting_utils`, semantic samplers and demo notebooks — but NO turnkey monocular

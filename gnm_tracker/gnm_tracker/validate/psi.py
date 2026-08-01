@@ -2,7 +2,7 @@
 
 Independent of any fitted clip: sample random expressions and identities and
 assert the cross-identity displacement drift stays below threshold. Wired into
-`scripts/validate_psi.py` for CI. Requires torch.
+`src/validate_psi.py` for CI. Requires torch.
 """
 
 from __future__ import annotations

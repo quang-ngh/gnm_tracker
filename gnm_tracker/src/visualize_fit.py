@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Re-visualize a saved dataset record over its source video (Section 11).
 
-    python scripts/visualize_fit.py --record outputs/clips/<id>.npz --video clip.mp4 --out debug/
+    python src/visualize_fit.py --record outputs/clips/<id>.npz --video clip.mp4 --out debug/
 
 Rebuilds a Fitter for the clip, loads the exported params, and dumps the debug
 folder (overlays, video, plots) so a saved fit can be eyeballed after the fact.

@@ -8,7 +8,7 @@ Optional — without it the fitter falls back to a strong L2 prior.
 
 Requires TensorFlow (the sampler's decoder is a Keras model).
 
-    python scripts/estimate_psi_prior.py --per-class 400
+    python src/estimate_psi_prior.py --per-class 400
 """
 
 from __future__ import annotations

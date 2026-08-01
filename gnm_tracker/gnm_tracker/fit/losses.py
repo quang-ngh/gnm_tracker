@@ -72,7 +72,7 @@ class ExpressionPrior:
                 # Graceful fallback (Section 6: "else plain L2").
                 print(
                     "[ExpressionPrior] no psi_precision.npz found; falling back to L2. "
-                    "Run scripts/estimate_psi_prior.py to enable Mahalanobis."
+                    "Run src/estimate_psi_prior.py to enable Mahalanobis."
                 )
                 mode = "l2"
         return cls(mode=mode, precision=precision)

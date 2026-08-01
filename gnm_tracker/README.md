@@ -28,9 +28,15 @@ data/
   correspondence/  vendored MediaPipe↔GNM 468 correspondence (+ self-check)
   groups/          expression-dim groups (tongue 350..381) + orientation info
 configs/     default.yaml (every threshold / loss weight / schedule knob)
-scripts/     tier0, fit_single_frame, fit_sequence, build_dataset, validate_psi, visualize_fit
+src/         Python entry points (tier0, fit_single_frame, fit_sequence, build_dataset,
+             validate_psi, visualize_fit, dump_gnm_groups, estimate_psi_prior, render_pyrender)
+scripts/     bash wrappers only (e.g. render_pyrender.sh)
+docs/        IMPLEMENTATION.md + RENDERING.md
 tests/
 ```
+
+**Convention:** `src/*.py` are the Python entry points; `scripts/*.sh` are bash
+wrappers around them. See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
 ## Setup
 
@@ -41,7 +47,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ../gnm/shape[pytorch]      # GNM Head, PyTorch backend
 pip install -e .[dev]                      # this package + pytest
 # regenerate the derived group/orientation file (optional; already vendored):
-python scripts/dump_gnm_groups.py
+python src/dump_gnm_groups.py
 ```
 
 `nvdiffrast` (photometric stage) needs CUDA; on Apple Silicon use `pytorch3d`
@@ -52,16 +58,16 @@ python scripts/dump_gnm_groups.py
 
 | Tier | Script | Gate |
 |---|---|---|
-| 0 baseline | `scripts/run_tier0_official.py` | is GNM's shipped stack enough? |
-| 1 single-frame | `scripts/fit_single_frame.py --viz` | stable convergence, overlay aligned |
-| 2 sequence | `scripts/fit_sequence.py --viz` | passes ψ-cleanliness, jitter-free |
-| 3 dataset | `scripts/build_dataset.py` | spot-check + automated gates pass |
+| 0 baseline | `src/run_tier0_official.py` | is GNM's shipped stack enough? |
+| 1 single-frame | `src/fit_single_frame.py --viz` | stable convergence, overlay aligned |
+| 2 sequence | `src/fit_sequence.py --viz` | passes ψ-cleanliness, jitter-free |
+| 3 dataset | `src/build_dataset.py` | spot-check + automated gates pass |
 
 ## Quick start
 
 ```bash
 # validate the vendored correspondence on our exact GNM build (eyelid gotcha):
-python scripts/validate_psi.py --correspondence-only
+python src/validate_psi.py --correspondence-only
 # fit one clip and dump debug viz:
-python scripts/fit_sequence.py --video path/to/clip.mp4 --out outputs/ --viz
+python src/fit_sequence.py --video path/to/clip.mp4 --out outputs/ --viz
 ```
