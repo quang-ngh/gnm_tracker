@@ -36,9 +36,9 @@ def main() -> None:
     from gnm_tracker.io import read_video
 
     cfg = load_config(args.config)
+    _common.apply_out_dir(cfg, args.out)
     device = _common.get_device(cfg, args.device)
     model = _common.load_model(cfg, device)
-    detector = _common.make_detector(args.mp_model, running_mode="video")
 
     videos = sorted(Path(args.videos_dir).glob(args.glob))
     if args.limit:
@@ -51,7 +51,14 @@ def main() -> None:
         print(f"[{i + 1}/{len(videos)}] {clip_id}")
         try:
             frames, fps = read_video(video, max_frames=args.max_frames)
-            detections = detector.detect_video(frames, fps)
+            # Fresh detector per clip: MediaPipe VIDEO mode needs monotonic
+            # timestamps and keeps tracking state, so it must not be shared
+            # across clips (each clip's timestamps restart at 0).
+            detector = _common.make_detector(args.mp_model, running_mode="video")
+            try:
+                detections = detector.detect_video(frames, fps)
+            finally:
+                detector.close()
             result = fit_sequence(model, frames, detections, cfg, device=device)
             record = ClipRecord.from_sequence_result(clip_id, result, cfg, extra_meta={"fps": fps})
             write_record(record, cfg)
@@ -65,7 +72,6 @@ def main() -> None:
         except Exception:  # keep the pipeline going on a bad clip
             print(f"    FAILED {clip_id}:\n{traceback.format_exc()}")
 
-    detector.close()
     if records:
         stats = write_stats(records, cfg)
         print(f"dataset stats -> {stats}")

@@ -29,6 +29,7 @@ def main() -> None:
     from gnm_tracker.io import read_video
 
     cfg = load_config(args.config)
+    _common.apply_out_dir(cfg, args.out)
     device = _common.get_device(cfg, args.device)
     model = _common.load_model(cfg, device)
 

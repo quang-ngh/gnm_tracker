@@ -73,6 +73,14 @@ class GnmModel(nn.Module):
         )
         self.gnm.to(device)   # move GNM's buffers (it is not tracked as a submodule)
         self.to(device)
+        # GNM keeps `joint_parent_indices` as a CPU numpy array (not a registered
+        # buffer), and its forward builds the parent-index tensor with
+        # `torch.asarray(joint_parent_indices[1:], ...)`, which lands on CPU and
+        # breaks `index_select` on GPU. Pin it to `device` (torch.asarray then
+        # preserves the device). Harmless on CPU.
+        self.gnm.joint_parent_indices = torch.as_tensor(
+            np.asarray(self.gnm.joint_parent_indices), dtype=torch.long, device=device
+        )
 
     # ------------------------------------------------------------------
     def _build_face_mask(self, groups: dict) -> torch.Tensor:

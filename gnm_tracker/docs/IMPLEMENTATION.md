@@ -136,10 +136,16 @@ curl -Lo data/mediapipe/face_landmarker.task \
 
 pytest -q
 python src/validate_psi.py --correspondence-only
-python src/fit_sequence.py --video <clip>.mp4 --out outputs --viz --device cpu \
-       --mp-model data/mediapipe/face_landmarker.task
-python src/build_dataset.py --videos-dir ../TalkingHead-1KH/small/cropped_clips --out outputs
+# bash wrappers (device auto: CUDA if available else CPU):
+scripts/fit_clip.sh   <clip>.mp4   outputs                       # one clip
+scripts/fit_folder.sh <videos_dir> outputs                       # whole folder
+# env knobs: DEVICE=cuda|cpu|mps  MAX_FRAMES=60  CONFIG=configs/fast.yaml
+#            LIMIT / GLOB / VIZ (folder)  NO_VIZ (clip)  PYTHON=.venv/bin/python
 ```
+
+`--out` (2nd wrapper arg) controls where the dataset lands (`<out>/clips/*.npz`,
+`<out>/manifest.jsonl`, `<out>/dataset_stats.json`, `<out>/debug/`).
+`configs/fast.yaml` is a low-iteration config for quick tries.
 
 ## 8. Export schema (§7)
 
@@ -157,6 +163,17 @@ mean/var, tongue-dim magnitude to confirm the pin behaved).
 - **Jerk metric over-scaled** — dividing the third difference of ψ by a global `std`
   (dominated by ~380 zero dims) dropped every frame. Now normalized by the clip's robust
   expression amplitude (`quality/mask.py`).
+- **Shared MediaPipe detector across clips** — `build_dataset` reused one VIDEO-mode
+  landmarker, which requires monotonic timestamps (and keeps tracking state); the 2nd
+  clip's timestamps restart at 0 → crash. Now a fresh detector per clip.
+- **`--out` ignored for the dataset** — it only set the viz dir; the npz/manifest/stats
+  went to the config's `export.*`. Now `--out` overrides all export paths
+  (`_common.apply_out_dir`).
+- **GPU device mismatch in GNM's skinning** — GNM keeps `joint_parent_indices` as a CPU
+  numpy array (not a registered buffer), and its forward builds the parent-index tensor
+  with `torch.asarray(joint_parent_indices[1:], ...)` which lands on CPU → `index_select`
+  device mismatch on CUDA. Fixed by pinning it to the model's device in
+  `model/gnm_wrapper.py` (then `torch.asarray` preserves the device).
 
 ## 10. Not done / next steps
 

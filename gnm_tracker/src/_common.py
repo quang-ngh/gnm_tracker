@@ -23,6 +23,17 @@ def get_device(cfg, override: str | None = None) -> str:
     return d
 
 
+def apply_out_dir(cfg, out: str | None) -> None:
+    """Point the export paths (npz clips, manifest, stats) at ``out`` if given."""
+    if not out:
+        return
+    import pathlib as _p
+
+    cfg.export.output_dir = out
+    cfg.export.manifest = str(_p.Path(out) / "manifest.jsonl")
+    cfg.export.stats = str(_p.Path(out) / "dataset_stats.json")
+
+
 def load_model(cfg, device: str):
     from gnm_tracker.model import GnmModel
 

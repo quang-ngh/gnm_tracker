@@ -30,7 +30,7 @@ data/
 configs/     default.yaml (every threshold / loss weight / schedule knob)
 src/         Python entry points (tier0, fit_single_frame, fit_sequence, build_dataset,
              validate_psi, visualize_fit, dump_gnm_groups, estimate_psi_prior, render_pyrender)
-scripts/     bash wrappers only (e.g. render_pyrender.sh)
+scripts/     bash wrappers only (fit_clip.sh, fit_folder.sh, render_pyrender.sh)
 docs/        IMPLEMENTATION.md + RENDERING.md
 tests/
 ```
@@ -65,9 +65,22 @@ python src/dump_gnm_groups.py
 
 ## Quick start
 
+Bash wrappers (device auto-detected: CUDA if available, else CPU):
+
 ```bash
-# validate the vendored correspondence on our exact GNM build (eyelid gotcha):
-python src/validate_psi.py --correspondence-only
-# fit one clip and dump debug viz:
-python src/fit_sequence.py --video path/to/clip.mp4 --out outputs/ --viz
+# one clip -> record + debug viz:
+scripts/fit_clip.sh path/to/clip.mp4 outputs
+# a whole folder -> dataset (npz + manifest + stats):
+scripts/fit_folder.sh path/to/videos_dir outputs
+```
+
+Env knobs: `DEVICE=cuda|cpu|mps`, `MAX_FRAMES=60`, `CONFIG=configs/fast.yaml`,
+`LIMIT=10` / `GLOB='*.mp4'` / `VIZ=1` (folder), `NO_VIZ=1` (clip),
+`PYTHON=.venv/bin/python`. `configs/fast.yaml` is a low-iteration config for quick
+tries. Or call the Python directly:
+
+```bash
+python src/validate_psi.py --correspondence-only            # correspondence self-check
+python src/fit_sequence.py --video clip.mp4 --out outputs --viz
+python src/build_dataset.py --videos-dir videos_dir --out outputs
 ```
